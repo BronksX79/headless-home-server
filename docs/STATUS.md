@@ -10,16 +10,22 @@
 * **Services Orchestration:**
   * **Pi-hole** — local DNS sinkhole, dashboard on port 8080.
   * **Caddy** — edge reverse proxy on ports 80/443.
-  * **Immich** — photo backup engine on port 2283, with machine learning and video transcoding disabled to fit the CPU/RAM budget.
-* **Local DNS Mapping:** `photos.local` and `pi.home` resolve locally via Pi-hole, routed through Caddy.
+  * **Immich** — photo backup engine, machine learning and video transcoding disabled to fit the CPU/RAM budget.
+  * **homepage** — unified dashboard linking to all services.
+  * **filebrowser** — web-based file management for the 1TB HDD, including direct editing of compose files.
+  * **Vaultwarden** — self-hosted, Bitwarden-compatible password manager, served over HTTPS via Caddy's local CA.
+* **Local DNS Mapping:** `photos.local`, `pi.home`, `home.local`, `files.local`, and `vault.local` all resolve locally via Pi-hole, routed through Caddy.
 * **Static Web Deployment:** A single-file responsive HTML/CSS portfolio page served directly from `/mnt/storage/portfolio`.
-* **Host Firewall Enforcement (UFW):** Found and fixed a firewall that had been silently disabled since early setup. Now default-deny on incoming, with DNS and the Pi-hole dashboard restricted to the home LAN, and Immich's port never opened directly. Full story in `docs/troubleshooting/FIREWALL_HARDENING.md`.
+* **Host Firewall Enforcement (UFW):** Default-deny on incoming, with DNS and the Pi-hole dashboard restricted to the home LAN. See `docs/troubleshooting/FIREWALL_HARDENING.md`.
+* **Network Isolation (Docker/UFW Gap Fix):** Discovered that Docker's own iptables rules bypass UFW entirely for published container ports. Migrated Immich, homepage, and filebrowser off host-published ports and onto an internal-only Docker network (`proxynet`), reachable exclusively through Caddy. See `docs/troubleshooting/NETWORK_ISOLATION.md`.
+* **Remote Access via Tailscale:** WireGuard-based private mesh network, no router ports forwarded. MagicDNS + Pi-hole as tailnet nameserver lets any connected device resolve all internal `*.local` domains from anywhere. Confirmed working over mobile data. See `docs/troubleshooting/TAILSCALE_REMOTE_ACCESS.md`.
 
 ## Planned
 
 * **Samba (SMB) Server Integration** — drag-and-drop file access from Windows/macOS clients on the LAN.
-* **Tailscale Mesh Network** — encrypted remote access to dashboards without opening router ports.
 * **Memory Array Expansion** — 4GB → 8GB DDR3, mainly to give Postgres more caching headroom.
-* **Automated Offsite Backup (rsync)** — nightly mirror of the photo library to a separate external drive.
-* **Immich Directory Migration** — move Immich's compose file and data off `~/immich` (SSD) and into the `/mnt/storage/docker` layout used by Pi-hole and Caddy, per the standard in `CONTRIBUTING.md`.
+* **Automated Offsite Backup (rsync)** — nightly mirror of the photo library (and Vaultwarden's data directory) to a separate external drive.
+* **Immich Directory Migration** — move Immich's compose file and data off `~/immich` (SSD) and into the `/mnt/storage/docker` layout used by other services, per the standard in `CONTRIBUTING.md`.
 * **Power-Loss Mitigation** — evaluate a small UPS, since the battery cells were removed and any mains interruption is currently an unclean shutdown for Postgres. See `docs/troubleshooting/BOOT_LOOP_REMEDIATION.md`.
+* **Tailscale ACLs** — restrict which tailnet devices can reach higher-risk services (filebrowser in particular, given its compose-file edit capability) rather than leaving every service reachable to every connected device by default.
+* **Cloudflare Tunnel (selective, public-facing only)** — being considered for services intended to be genuinely public (e.g. sharing an Immich photo album link), kept strictly separate from Tailscale-only services like filebrowser and Vaultwarden.

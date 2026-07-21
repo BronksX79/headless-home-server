@@ -1,6 +1,6 @@
 # Headless Home Server
 
-A decade-old laptop, forgotten in a drawer after another project, turned into an always-on home server — DNS-level ad blocking, a reverse proxy, and private photo backup for both Android and iOS, built with no prior server experience.
+A decade-old laptop, forgotten in a drawer after another project, turned into an always-on home server — DNS-level ad blocking, a reverse proxy, private photo backup, a self-hosted password manager, and remote access from anywhere, built with no prior server experience.
 
 ## Quick Facts
 
@@ -11,7 +11,7 @@ A decade-old laptop, forgotten in a drawer after another project, turned into an
 
 ## Stack
 
-Ubuntu Server (headless) · Docker · Pi-hole · Caddy · Immich · UFW
+Ubuntu Server (headless) · Docker · Pi-hole · Caddy · Immich · homepage · filebrowser · Vaultwarden · Tailscale · UFW
 
 ## Engineering Logs & Troubleshooting
 
@@ -23,6 +23,8 @@ The full, unfiltered build process — including the mistakes — is documented 
 * [`docs/troubleshooting/BOOT_LOOP_REMEDIATION.md`](docs/troubleshooting/BOOT_LOOP_REMEDIATION.md) — a battery-less boot-loop and its (unconfirmed) cause
 * [`docs/troubleshooting/IMMICH_DATABASE_FIX.md`](docs/troubleshooting/IMMICH_DATABASE_FIX.md) — a vector-database version mismatch
 * [`docs/troubleshooting/FIREWALL_HARDENING.md`](docs/troubleshooting/FIREWALL_HARDENING.md) — a firewall that was silently off for weeks
+* [`docs/troubleshooting/NETWORK_ISOLATION.md`](docs/troubleshooting/NETWORK_ISOLATION.md) — Docker silently bypassing UFW for published ports
+* [`docs/troubleshooting/TAILSCALE_REMOTE_ACCESS.md`](docs/troubleshooting/TAILSCALE_REMOTE_ACCESS.md) — remote access setup, and three separate issues fixed along the way
 
 ## Other
 

@@ -19,6 +19,7 @@
 * **Host Firewall Enforcement (UFW):** Default-deny on incoming, with DNS and the Pi-hole dashboard restricted to the home LAN. See `docs/troubleshooting/FIREWALL_HARDENING.md`.
 * **Network Isolation (Docker/UFW Gap Fix):** Discovered that Docker's own iptables rules bypass UFW entirely for published container ports. Migrated Immich, homepage, and filebrowser off host-published ports and onto an internal-only Docker network (`proxynet`), reachable exclusively through Caddy. See `docs/troubleshooting/NETWORK_ISOLATION.md`.
 * **Remote Access via Tailscale:** WireGuard-based private mesh network, no router ports forwarded. MagicDNS + Pi-hole as tailnet nameserver lets any connected device resolve all internal `*.local` domains from anywhere. Confirmed working over mobile data. See `docs/troubleshooting/TAILSCALE_REMOTE_ACCESS.md`.
+* **Tailscale ACLs — Filebrowser Restriction:** Filebrowser (able to directly edit compose files) moved to its own dedicated Caddy port and restricted via a Tailscale ACL to a single tagged, trusted device. Every other service remains reachable to any tailnet device. Verified: untagged devices time out on the filebrowser port entirely, rather than merely hitting a login screen. See `docs/troubleshooting/TAILSCALE_ACL_FILEBROWSER.md`.
 
 ## Planned
 
@@ -27,5 +28,4 @@
 * **Automated Offsite Backup (rsync)** — nightly mirror of the photo library (and Vaultwarden's data directory) to a separate external drive.
 * **Immich Directory Migration** — move Immich's compose file and data off `~/immich` (SSD) and into the `/mnt/storage/docker` layout used by other services, per the standard in `CONTRIBUTING.md`.
 * **Power-Loss Mitigation** — evaluate a small UPS, since the battery cells were removed and any mains interruption is currently an unclean shutdown for Postgres. See `docs/troubleshooting/BOOT_LOOP_REMEDIATION.md`.
-* **Tailscale ACLs** — restrict which tailnet devices can reach higher-risk services (filebrowser in particular, given its compose-file edit capability) rather than leaving every service reachable to every connected device by default.
 * **Cloudflare Tunnel (selective, public-facing only)** — being considered for services intended to be genuinely public (e.g. sharing an Immich photo album link), kept strictly separate from Tailscale-only services like filebrowser and Vaultwarden.

@@ -25,6 +25,7 @@ The full, unfiltered build process — including the mistakes — is documented 
 * [`docs/troubleshooting/FIREWALL_HARDENING.md`](docs/troubleshooting/FIREWALL_HARDENING.md) — a firewall that was silently off for weeks
 * [`docs/troubleshooting/NETWORK_ISOLATION.md`](docs/troubleshooting/NETWORK_ISOLATION.md) — Docker silently bypassing UFW for published ports
 * [`docs/troubleshooting/TAILSCALE_REMOTE_ACCESS.md`](docs/troubleshooting/TAILSCALE_REMOTE_ACCESS.md) — remote access setup, and three separate issues fixed along the way
+* [`docs/troubleshooting/TAILSCALE_ACL_FILEBROWSER.md`](docs/troubleshooting/TAILSCALE_ACL_FILEBROWSER.md) — restricting the highest-risk service to one trusted device only
 
 ## Other
 

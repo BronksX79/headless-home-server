@@ -20,10 +20,10 @@ This document specifies the physical storage partitions, directory layouts, and 
 * 📦 **OS & Engine:** Ubuntu Server and Docker core files live here.
 * 📦 **Postgres DB:** Mapped to SSD volumes to prevent query bottlenecks.
 * 📦 **Seagate Storage HDD (`/dev/sdb1`):** Stores high-capacity file payloads.
-* 📦 **Docker Metadata (Pi-hole, Caddy):** Service compose folders live at `/mnt/storage/docker`.
+* 📦 **Docker Metadata:** Pi-hole, Caddy, homepage/filebrowser, and Vaultwarden compose folders live at `/mnt/storage/docker`.
 * 📦 **Static Web Assets:** Portfolio code lives at `/mnt/storage/portfolio`.
 
-> ⚠️ **Known Deviation — Immich is not yet migrated.** Per `CONTRIBUTING.md`'s volume binding standard, Immich's compose files and upload volume should live at `/mnt/storage/docker/immich`. In practice, Immich was deployed and is still running from `~/immich` on the boot SSD, and its Postgres data volume is a Docker-managed named volume (`immich_immich-db`) rather than an explicit host path. This is flagged as **planned cleanup work**, not a documentation error — see Planned Developments in the README.
+> ⚠️ **Known Deviation — Immich is not yet migrated.** Per `CONTRIBUTING.md`'s volume binding standard, Immich's compose files and upload volume should live at `/mnt/storage/docker/immich`. In practice, Immich runs from `~/immich` on the boot SSD, with Postgres on a Docker-managed named volume rather than an explicit host path. Tracked in `docs/STATUS.md`.
 
 ---
 
@@ -33,36 +33,43 @@ This document specifies the physical storage partitions, directory layouts, and 
 
 * ⚙️ **Physical Interface:** `enp5s0` (Realtek Gigabit Ethernet RJ45)
 * ⚙️ **Static Local IP Address:** `192.168.55.233`
-* ⚙️ **Ad-Blocking Local Shortcut:** `http://pi.home` (Port 80)
-* ⚙️ **Photo Cloud Local Shortcut:** `http://photos.local` (Port 80)
-* ⚙️ **Direct Local Web Gateway:** `http://192.168.55.233` (Port 80)
+* ⚙️ **Tailscale IP:** `100.105.250.83` (see `docs/troubleshooting/TAILSCALE_REMOTE_ACCESS.md`)
+* ⚙️ **Local domains (via Pi-hole):** `pi.home`, `photos.local`, `home.local`, `files.local`, `vault.local`
+
+### Docker Network Segmentation
+
+Services fall into two categories:
+
+* **Internal-only (`proxynet`):** Immich, homepage, filebrowser, and Vaultwarden publish no ports to the host at all. They join a dedicated Docker bridge network (`proxynet`) that only Caddy also joins, and are reachable exclusively through Caddy's reverse proxy, addressed by container name.
+* **Host-published (unavoidable):** Caddy (80/443, the only intended host-facing service) and Pi-hole (53 for DNS, 8080 for its dashboard — neither can route through an HTTP reverse proxy).
 
 ### Host Port Bindings & Reverse Proxy Routes
 
 ```text
-[LAN Client Requests]
+[LAN / Tailscale Client Requests]
        │
        ▼
  [Host: 192.168.55.233]
        │
        ├───► Port 53 ───► [Pi-hole Container:53] (DNS Traffic Sinkhole)
        │
-       ├───► Port 80 ───► [Caddy Container:80] (Primary Reverse Proxy)
+       ├───► Port 80/443 ───► [Caddy Container] (Primary Reverse Proxy, on proxynet)
        │                    │
-       │                    ├───► http://192.168.55.233 ──► [Local Folder: /var/www/portfolio]
-       │                    ├───► http://photos.local   ──► [Immich Server Container:2283]
-       │                    └───► http://pi.home        ──► [Pi-hole Dashboard Container:80]
+       │                    ├──► http://192.168.55.233 ──► [Local Folder: /var/www/portfolio]
+       │                    ├──► http://photos.local   ──► [immich_server:2283]   (proxynet)
+       │                    ├──► http://home.local     ──► [homepage:3000]        (proxynet)
+       │                    ├──► http://files.local    ──► [filebrowser:80]       (proxynet)
+       │                    ├──► https://vault.local   ──► [vaultwarden:80]       (proxynet, tls internal)
+       │                    └──► http://pi.home        ──► [Pi-hole Dashboard:8080] (host IP, not on proxynet)
        │
-       ├───► Port 8080 ──► [Pi-hole Admin Console] (LAN-restricted, bypasses Caddy proxy)
-       │
-       └───► Port 2283 ──► [Immich Core API Engine] (Not exposed — see Firewall Rules below)
+       └───► Port 8080 ──► [Pi-hole Admin Console] (LAN-restricted, bypasses Caddy proxy)
 ```
+
+**Deliberately not published to the host at all:** Immich (2283), homepage (3000), filebrowser (8090). See `docs/troubleshooting/NETWORK_ISOLATION.md` for why this changed from an earlier, firewall-only approach.
 
 ---
 
 ## 📊 Firewall State (UFW) — Verified
-
-> This section was previously written to describe an *intended* firewall policy that was, in fact, never enforced — UFW had been disabled during Phase 1 troubleshooting (`sudo ufw disable`) and stayed inactive through the remainder of initial deployment. The rules below were verified live via `sudo ufw status verbose` on 2026-07-17 and reflect the actual, currently active state. See `docs/troubleshooting/FIREWALL_HARDENING.md` for the full remediation log.
 
 **Status:** `active` | **Default policy:** deny (incoming), allow (outgoing), deny (routed) | **Logging:** on (low)
 
@@ -76,9 +83,9 @@ This document specifies the physical storage partitions, directory layouts, and 
 | 6 | 8080 | ALLOW IN | `192.168.55.0/24` only | Pi-hole dashboard – LAN restricted |
 | 7–10 | (v6 equivalents of 1–4) | ALLOW IN | Anywhere (v6) | Same as above |
 
-**Deliberately not opened:** Port `2283` (Immich direct API) has no firewall rule at all. It is only reachable through Caddy's reverse proxy on 80/443 — this enforces the "isolate your ports" principle rather than just documenting it as a suggestion.
+> ⚠️ **Important nuance, learned the hard way:** UFW rules alone do **not** guarantee a port is inaccessible. Docker inserts its own `iptables` rules for any container using `ports:`, and those rules take effect **before** UFW's — meaning a published container port is reachable regardless of what UFW says. This is why Immich, homepage, and filebrowser were migrated onto the internal `proxynet` network entirely (removing `ports:` from their compose files) rather than relying on a UFW rule to restrict them. Pi-hole's `53`/`8080` are the one remaining exception, since DNS can't be reverse-proxied — those stay genuinely reliant on both the LAN-restricted UFW rule *and* not being forwarded on the router.
 
-**Known limitation:** Rules 5 and 6 are IPv4-only (`192.168.55.0/24` is not a valid IPv6 notation). Any device reaching Pi-hole or its dashboard over IPv6 would currently be blocked outright rather than LAN-restricted. This fails closed (blocks access) rather than open (allows internet-wide access), so it is a functionality gap, not a security gap — noted here so a future "why can't device X reach Pi-hole" issue isn't a mystery.
+**Known limitation:** Rules 5 and 6 are IPv4-only. A device reaching Pi-hole over IPv6 would be blocked outright rather than LAN-scoped — fails closed, not open.
 
 ### DNS Resolution Flowchart
 
@@ -89,7 +96,7 @@ This document specifies the physical storage partitions, directory layouts, and 
               ▼                           ▼
       [Internal Domain?]          [External Domain?]
               │                           │
-     (photos.local / pi.home)       (google.com)
+     (*.local / pi.home)           (google.com)
               │                           │
               ▼                           ▼
     [Resolve to 192.168.55.233]   [Forward to upstream resolver]
@@ -97,3 +104,5 @@ This document specifies the physical storage partitions, directory layouts, and 
               ▼                           ▼
      [Route via Caddy Proxy]     [Fetch Web Payload]
 ```
+
+Devices connected via Tailscale use the same Pi-hole instance as their tailnet nameserver (MagicDNS + custom nameserver `192.168.55.233`), so `*.local` domains resolve identically whether a device is on the home LAN or connecting remotely. See `docs/troubleshooting/TAILSCALE_REMOTE_ACCESS.md` for the subnet-routing configuration that makes this reachable, not just resolvable.

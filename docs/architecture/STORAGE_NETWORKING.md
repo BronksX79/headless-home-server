@@ -13,6 +13,7 @@ This document specifies the physical storage partitions, directory layouts, and 
 | `/dev/sda1` | Lexar NS100 SSD | 1MB | N/A | None | BIOS Boot Partition (GRUB) |
 | `/dev/sda2` | Lexar NS100 SSD | 119.2GB | `ext4` | `/` (System Root) | Host OS, Docker, postgres DB |
 | `/dev/sdb1` | Seagate Mobile HDD | 931.5GB | `ext4` | `/mnt/storage` | Bulk Photos, Docker Configs, Static Site |
+| `/dev/sdc1` | TOSHIBA MK2559GSXP HDD | 250 GB | `ext4` | `/mnt/backup-HDD` | Backup: Immich database, Vaulwarden Passwords, Config Files |
 
 ### Directory Tree & Mounting Boundaries
 

@@ -23,6 +23,14 @@ This document specifies the physical storage partitions, directory layouts, and 
 * 📦 **Seagate Storage HDD (`/dev/sdb1`):** Stores high-capacity file payloads.
 * 📦 **Docker Metadata:** Pi-hole, Caddy, homepage/filebrowser, and Vaultwarden compose folders live at `/mnt/storage/docker`.
 * 📦 **Static Web Assets:** Portfolio code lives at `/mnt/storage/portfolio`.
+* 📦 **Toshiba Backup HDD (`/dev/sdc1`):** Used as the rsync destination for the cron backup job.
+
+### Backup Drive
+
+A 256GB 2.5" HDD is attached via a powered USB hub and used as the rsync destination for the Sunday 04:00 cron backup job.
+
+**Confirmed:** cron job fires on schedule; rsync completes without error.
+**Not yet confirmed:** restore from this backup has not been tested. Until a restore is performed and verified, treat this backup as unproven rather than as a guaranteed recovery path.
 
 > ⚠️ **Known Deviation — Immich is not yet migrated.** Per `CONTRIBUTING.md`'s volume binding standard, Immich's compose files and upload volume should live at `/mnt/storage/docker/immich`. In practice, Immich runs from `~/immich` on the boot SSD, with Postgres on a Docker-managed named volume rather than an explicit host path. Tracked in `docs/STATUS.md`.
 
